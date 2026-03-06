@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard – ExamGuard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/auth.js"></script>
+</head>
+
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-layout" id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🛡️</div>
+                <div>
+                    <div class="sidebar-brand-name">ExamGuard</div>
+                    <div class="sidebar-brand-role">Admin Panel</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Overview</div>
+                <button class="nav-item active" onclick="showSection('dashboard')">
+                    <span class="nav-icon">📊</span> Dashboard
+                </button>
+                <button class="nav-item" onclick="showSection('exams')">
+                    <span class="nav-icon">📝</span> Active Exams
+                </button>
+                <button class="nav-item" onclick="showSection('students')">
+                    <span class="nav-icon">🎓</span> Students
+                </button>
+                <div class="nav-section-title">Monitoring</div>
+                <button class="nav-item" onclick="showSection('alerts')" id="nav-alerts">
+                    <span class="nav-icon">🚨</span> Alerts
+                    <span class="nav-badge" id="alerts-badge">3</span>
+                </button>
+                <button class="nav-item" onclick="showSection('activity')">
+                    <span class="nav-icon">📡</span> Live Activity
+                </button>
+                <button class="nav-item" onclick="showSection('reports')">
+                    <span class="nav-icon">📈</span> Reports
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-initial">A</div>
+                    <div>
+                        <div class="user-name" id="user-fullname">Administrator</div>
+                        <div class="user-role" id="user-email">admin@examguard.io</div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="AUTH.logout()">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="topbar-title" id="page-title">Dashboard Overview</div>
+                    <div class="topbar-subtitle" id="page-subtitle">Real-time monitoring and exam control center</div>
+                </div>
+                <div class="topbar-right">
+                    <div id="live-clock" style="font-size:13px;color:var(--text-muted);font-weight:500;"></div>
+                    <span class="badge badge-green"><span class="badge-dot badge-dot-pulse"></span>Live</span>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleSimulation()">⚡ Simulate Alert</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+
+                <!-- DASHBOARD SECTION -->
+                <div class="content-section active" id="sec-dashboard">
+                    <!-- Stat Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card purple-glow">
+                            <div class="stat-icon">📝</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Active Exams</div>
+                                <div class="stat-value" id="stat-active-exams">4</div>
+                                <div class="stat-trend trend-up">↑ 2 started today</div>
+                            </div>
+                        </div>
+                        <div class="stat-card cyan-glow">
+                            <div class="stat-icon">🎓</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Students Online</div>
+                                <div class="stat-value" id="stat-students-online">87</div>
+                                <div class="stat-trend trend-up">↑ 12 joined last 5m</div>
+                            </div>
+                        </div>
+                        <div class="stat-card amber-glow">
+                            <div class="stat-icon">🚨</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Proctoring Alerts</div>
+                                <div class="stat-value" id="stat-alerts">3</div>
+                                <div class="stat-trend trend-alert">⚠ Requires attention</div>
+                            </div>
+                        </div>
+                        <div class="stat-card green-glow">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Completion Rate</div>
+                                <div class="stat-value" id="stat-completion">72<span
+                                        style="font-size:18px;font-weight:500;">%</span></div>
+                                <div class="stat-trend trend-up">↑ 5% vs last session</div>
+                            </div>
+                        </div>
+                        <div class="stat-card red-glow">
+                            <div class="stat-icon">📡</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Connectivity Issues</div>
+                                <div class="stat-value" id="stat-conn-issues">5</div>
+                                <div class="stat-trend trend-alert">● 5 unstable connections</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="two-col" style="margin-bottom:20px;">
+                        <!-- Line Chart: Online Students -->
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Students Online (Last 10 min)</div>
+                                    <div style="font-size:12px;color:var(--text-muted);">Real-time join/leave activity
+                                    </div>
+                                </div>
+                                <div class="chart-legend">
+                                    <div class="legend-item">
+                                        <div class="legend-dot" style="background:#6366f1"></div>Online
+                                    </div>
+                                </div>
+                            </div>
+                            <svg class="chart-svg" viewBox="0 0 400 180" id="online-svg"></svg>
+                        </div>
+
+                        <!-- Bar Chart: Alerts by Type -->
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Alerts by Category</div>
+                                    <div style="font-size:12px;color:var(--text-muted);">This session breakdown</div>
+                                </div>
+                            </div>
+                            <svg class="chart-svg" viewBox="0 0 400 180" id="alerts-svg"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Completion Donut + Connectivity Table -->
+                    <div class="two-col">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <div class="chart-title">Exam Completion Status</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:24px;">
+                                <svg viewBox="0 0 120 120" width="120" height="120" id="donut-svg"></svg>
+                                <div id="donut-legend" style="flex:1;display:flex;flex-direction:column;gap:10px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-title" style="margin-bottom:16px;">Connectivity Status</div>
+                            <div id="connectivity-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTIVE EXAMS SECTION -->
+                <div class="content-section" id="sec-exams">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Active Exams</div>
+                            <div class="section-subtitle">Currently running examination sessions</div>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Exam Name</th>
+                                    <th>Subject</th>
+                                    <th>Students</th>
+                                    <th>Duration</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exams-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STUDENTS SECTION -->
+                <div class="content-section" id="sec-students">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Students</div>
+                            <div class="section-subtitle">All students currently in exam sessions</div>
+                        </div>
+                        <input type="text" placeholder="🔍 Search students..." class="form-control" style="width:240px;"
+                            oninput="filterStudents(this.value)" />
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>ID</th>
+                                    <th>Exam</th>
+                                    <th>Progress</th>
+                                    <th>Time Left</th>
+                                    <th>Connectivity</th>
+                                    <th>Alerts</th>
+                                </tr>
+                            </thead>
+                            <tbody id="students-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ALERTS SECTION -->
+                <div class="content-section" id="sec-alerts">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Proctoring Alerts</div>
+                            <div class="section-subtitle">Suspicious activity and system events</div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="clearAlerts()">Clear All</button>
+                    </div>
+                    <div id="alerts-list"></div>
+                </div>
+
+                <!-- LIVE ACTIVITY SECTION -->
+                <div class="content-section" id="sec-activity">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Live Activity Feed</div>
+                            <div class="section-subtitle">Real-time events from all exam sessions</div>
+                        </div>
+                        <span class="badge badge-green"><span class="badge-dot badge-dot-pulse"></span>Live Feed</span>
+                    </div>
+                    <div id="activity-feed" style="display:flex;flex-direction:column;gap:8px;"></div>
+                </div>
+
+                <!-- REPORTS SECTION -->
+                <div class="content-section" id="sec-reports">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Reports & Analytics</div>
+                            <div class="section-subtitle">Session statistics and performance data</div>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card purple-glow">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Total Sessions Today</div>
+                                <div class="stat-value">12</div>
+                            </div>
+                        </div>
+                        <div class="stat-card cyan-glow">
+                            <div class="stat-icon">🎓</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Total Students</div>
+                                <div class="stat-value">248</div>
+                            </div>
+                        </div>
+                        <div class="stat-card green-glow">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Exams Completed</div>
+                                <div class="stat-value">186</div>
+                            </div>
+                        </div>
+                        <div class="stat-card amber-glow">
+                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Total Alerts</div>
+                                <div class="stat-value">28</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <div class="chart-title">Weekly Exam Activity (Simulated)</div>
+                        </div>
+                        <svg class="chart-svg" viewBox="0 0 700 200" id="weekly-svg" style="height:200px;"></svg>
+                    </div>
+                </div>
+
+            </div><!-- /content-area -->
+        </main>
+    </div><!-- /app-layout -->
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+
+</html>
