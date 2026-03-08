@@ -13,13 +13,23 @@
     }
   }
 
-  // ---- Sample Data ----
-  const EXAMS = [
-    { id: 'E001', name: 'Data Structures Final', subject: 'CS301', students: 45, total: 45, duration: '2h', elapsed: 72, status: 'active' },
-    { id: 'E002', name: 'Algorithms Midterm', subject: 'CS302', students: 32, total: 40, duration: '1.5h', elapsed: 45, status: 'active' },
-    { id: 'E003', name: 'Database Design', subject: 'CS303', students: 28, total: 35, duration: '1h', elapsed: 55, status: 'active' },
-    { id: 'E004', name: 'Operating Systems', subject: 'CS304', students: 19, total: 30, duration: '2h', elapsed: 20, status: 'active' },
-  ];
+  // ---- Data Management ----
+  let EXAMS = AUTH.getExams();
+  // If no exams in persistence, use these as initial seed for Admin view
+  if (EXAMS.length === 0) {
+    const seedExams = [
+        { id: 'E001', name: 'Data Structures Final', subject: 'CS301', students: 45, total: 45, duration: '2h', elapsed: 72, status: 'active' },
+        { id: 'E002', name: 'Algorithms Midterm', subject: 'CS302', students: 32, total: 40, duration: '1.5h', elapsed: 45, status: 'active' },
+        { id: 'E003', name: 'Database Design', subject: 'CS303', students: 28, total: 35, duration: '1h', elapsed: 55, status: 'active' },
+        { id: 'E004', name: 'Operating Systems', subject: 'CS304', students: 19, total: 30, duration: '2h', elapsed: 20, status: 'active' },
+    ];
+    seedExams.forEach(e => {
+        // Map 'name' to 'title' if needed for consistency with manager.js
+        e.title = e.name;
+        AUTH.saveExam(e);
+    });
+    EXAMS = AUTH.getExams();
+  }
 
   const STUDENTS = [
     { name: 'Aarav Kumar', id: 'STU001', exam: 'Data Structures Final', prog: 78, timeLeft: '28 min', conn: 'online', alerts: 0 },
@@ -34,12 +44,10 @@
     { name: 'Kavya Reddy', id: 'STU010', exam: 'Algorithms Midterm', prog: 70, timeLeft: '30 min', conn: 'online', alerts: 1 },
   ];
 
-  let ALERTS = [
-    { type: 'critical', icon: '⚠️', title: 'Tab switch detected', desc: 'STU005 – Vikram Singh switched away from exam window 3 times.', time: '2 min ago', exam: 'Algorithms Midterm' },
-    { type: 'warning', icon: '📸', title: 'Camera feed blocked', desc: 'STU003 – Rohit Mehta: camera coverage lost for 45 seconds.', time: '4 min ago', exam: 'Algorithms Midterm' },
-    { type: 'critical', icon: '📡', title: 'Connectivity lost', desc: 'STU005 – Vikram Singh: connection dropped. Auto-paused exam.', time: '7 min ago', exam: 'Algorithms Midterm' },
-    { type: 'info', icon: 'ℹ️', title: 'Exam started', desc: 'E004 – Operating Systems exam session began.', time: '15 min ago', exam: 'Operating Systems' },
-    { type: 'warning', icon: '🖱️', title: 'Suspicious behavior', desc: 'STU002 – Priya Sharma: rapid mouse movement detected.', time: '18 min ago', exam: 'Data Structures Final' },
+  let SECURITY_ALERTS = [
+    { id: 'a1', sid: 'STU005', studentName: 'Vikram Singh', examName: 'Algorithms Midterm', alertType: 'Tab switch detected', violations: 3, timestamp: Date.now() - 120000, type: 'ALERT_TAB_SWITCH', status: 'Awaiting Review' },
+    { id: 'a2', sid: 'STU003', studentName: 'Rohit Mehta', examName: 'Algorithms Midterm', alertType: 'Camera feed blocked', violations: 1, timestamp: Date.now() - 240000, type: 'ALERT_CAMERA_OFF', status: 'Awaiting Review' },
+    { id: 'a3', sid: 'STU002', studentName: 'Priya Sharma', examName: 'Data Structures Final', alertType: 'Suspicious behavior', violations: 2, timestamp: Date.now() - 600000, type: 'behavior', status: 'Reviewed' }
   ];
 
   const ACTIVITY_FEED = [
@@ -59,19 +67,37 @@
     document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
     const navBtn = document.querySelector(`[onclick="showSection('${sec}')"]`);
     if (navBtn) navBtn.classList.add('active');
-    document.getElementById('sec-' + sec).classList.add('active');
+    const secEl = document.getElementById('sec-' + sec);
+    if (secEl) secEl.classList.add('active');
     currentSection = sec;
 
     const titles = {
       dashboard: ['Dashboard Overview', 'Real-time monitoring and exam control center'],
-      exams: ['Active Exams', 'Currently running examination sessions'],
-      students: ['Students Monitor', 'All students currently in exam sessions'],
+      monitor: ['Live Session Monitor', 'Real-time tracking of students currently in exams'],
+      exams: ['Programmed Exams', 'Currently running examination sessions'],
+      students: ['Student Directory', 'All students currently in exam sessions'],
+      results: ['Completed Results', 'Historical records of all submitted examinations'],
       alerts: ['Proctoring Alerts', 'Suspicious activity and system events'],
       activity: ['Live Activity Feed', 'Real-time events from all exam sessions'],
       reports: ['Reports & Analytics', 'Session statistics and performance data'],
     };
-    document.getElementById('page-title').textContent = titles[sec][0];
-    document.getElementById('page-subtitle').textContent = titles[sec][1];
+    if (titles[sec]) {
+        document.getElementById('page-title').textContent = titles[sec][0];
+        document.getElementById('page-subtitle').textContent = titles[sec][1];
+    }
+
+    // RE-RENDER ON NAVIGATION
+    if (sec === 'dashboard') {
+        renderConnectivity();
+        renderActivity();
+    }
+    if (sec === 'monitor') renderLiveMonitoring();
+    if (sec === 'exams') renderExams();
+    if (sec === 'students') renderStudents();
+    if (sec === 'results') renderAdminResults();
+    if (sec === 'alerts') renderSecurityAlerts();
+    if (sec === 'activity') renderActivity();
+    if (sec === 'reports') drawWeeklyChart();
   };
 
   // ---- Clock ----
@@ -81,29 +107,68 @@
   }
   updateClock(); setInterval(updateClock, 1000);
 
-  // ---- Render Exams Table ----
+  // ---- Render Programmed Exams Table ----
   function renderExams() {
     const tbody = document.getElementById('exams-tbody');
     if (!tbody) return;
-    tbody.innerHTML = EXAMS.map(e => `
-      <tr>
-        <td><strong>${e.name}</strong></td>
-        <td><span class="badge badge-purple">${e.subject}</span></td>
-        <td>${e.students}/${e.total}</td>
-        <td>${e.duration}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${e.elapsed}%"></div></div>
-            <span style="font-size:12px;color:var(--text-muted);width:34px;">${e.elapsed}%</span>
-          </div>
-        </td>
-        <td><span class="badge badge-green"><span class="badge-dot badge-dot-pulse"></span>Live</span></td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="showToast('info','Viewing '+${JSON.stringify(e.name)},'Opening exam session details…')">View</button>
-        </td>
-      </tr>
-    `).join('');
+
+    EXAMS = AUTH.getExams();
+    if (EXAMS.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted);">No exams found in the system.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = EXAMS.map(e => {
+      const statusBadge = e.status === 'active' ? 'badge-green' : (e.status === 'completed' ? 'badge-purple' : 'badge-amber');
+      const statusLabel = (e.status || 'scheduled').toUpperCase();
+      const isLive = e.status === 'active';
+
+      return `
+        <tr>
+          <td><strong>${e.title || e.name}</strong></td>
+          <td><span class="badge badge-purple">${e.subject}</span></td>
+          <td>${e.students || 0}/${e.total || '--'}</td>
+          <td>${e.duration}m</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${e.elapsed || 0}%"></div></div>
+              <span style="font-size:12px;color:var(--text-muted);width:34px;">${e.elapsed || 0}%</span>
+            </div>
+          </td>
+          <td><span class="badge ${statusBadge}">${isLive ? '<span class="badge-dot badge-dot-pulse"></span>' : ''}${statusLabel}</span></td>
+          <td>
+            <div style="display:flex;gap:5px;">
+              ${!isLive && e.status !== 'completed' ? `<button class="btn btn-primary btn-xs" onclick="launchExam('${e.id}')" style="background:var(--accent-green);">Launch</button>` : ''}
+              ${isLive ? `<button class="btn btn-secondary btn-xs" onclick="stopExam('${e.id}')" style="background:var(--accent-red);color:white;">Stop</button>` : ''}
+              <button class="btn btn-secondary btn-xs" onclick="showToast('info','Viewing '+${JSON.stringify(e.title || e.name)},'Opening exam session details…')">Details</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
+
+  window.launchExam = (id) => {
+    const exams = AUTH.getExams();
+    const exam = exams.find(e => e.id === id);
+    if (exam) {
+      exam.status = 'active';
+      AUTH.saveExam(exam);
+      renderExams();
+      showToast('success', 'Exam Launched', `${exam.title || exam.name} is now LIVE!`);
+    }
+  };
+
+  window.stopExam = (id) => {
+    const exams = AUTH.getExams();
+    const exam = exams.find(e => e.id === id);
+    if (exam) {
+      exam.status = 'completed';
+      AUTH.saveExam(exam);
+      renderExams();
+      showToast('info', 'Exam Stopped', `${exam.title || exam.name} has been completed.`);
+    }
+  };
 
   // ---- Render Students Table ----
   function renderStudents(filter = '') {
@@ -125,7 +190,7 @@
       return `<tr>
         <td>
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">${s.name[0]}</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-center;font-size:13px;font-weight:700;">${s.name[0]}</div>
             <strong>${s.name}</strong>
           </div>
         </td>
@@ -137,45 +202,140 @@
             <span style="font-size:12px;">${s.prog}%</span>
           </div>
         </td>
-        <td style="font-size:13px;">${s.timeLeft}</td>
         <td>${connBadge}</td>
-        <td>${alertBadge}</td>
+        <td style="font-weight:800;text-align:center;">${s.alerts || 0}</td>
+        <td>
+            <button class="btn btn-danger btn-xs" onclick="kickStudent('${s.id}')">KICK</button>
+        </td>
       </tr>`;
     }).join('');
   }
   window.filterStudents = (v) => renderStudents(v);
 
-  // ---- Render Alerts List ----
-  function renderAlerts() {
-    const el = document.getElementById('alerts-list');
-    if (!el) return;
-    document.getElementById('alerts-badge').textContent = ALERTS.filter(a => a.type === 'critical').length;
-    document.getElementById('stat-alerts').textContent = ALERTS.filter(a => a.type === 'critical').length;
-    if (ALERTS.length === 0) {
-      el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">No active alerts. All systems nominal. ✅</p>';
-      return;
+  // ---- Security Alerts Table ----
+
+  function renderSecurityAlerts() {
+    const tbody = document.getElementById('security-alerts-tbody');
+    if (!tbody) return;
+    
+    if (SECURITY_ALERTS.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No suspicious activity detected. All systems nominal. ✅</td></tr>';
+        return;
     }
-    el.innerHTML = ALERTS.map((a, i) => `
-      <div class="alert-item alert-${a.type}">
-        <span class="alert-icon">${a.icon}</span>
-        <div class="alert-content">
-          <div class="alert-title">${a.title}</div>
-          <div class="alert-desc">${a.desc}</div>
-          <div class="alert-time">⏱ ${a.time} · ${a.exam}</div>
-        </div>
-        <button onclick="dismissAlert(${i})" class="btn btn-secondary btn-sm">Dismiss</button>
-      </div>
-    `).join('');
+
+    // Sort by time (newest first)
+    const sorted = [...SECURITY_ALERTS].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    tbody.innerHTML = sorted.map((a) => {
+      let statusBadgeClass = 'badge-amber'; // Default: Awaiting Review
+      if (a.status === 'Reviewed') statusBadgeClass = 'badge-cyan';
+      if (a.status === 'Resolved') statusBadgeClass = 'badge-green';
+
+      return `
+        <tr class="${a.type.includes('ALERT') && a.status === 'Awaiting Review' ? 'row-alert-danger' : ''}">
+          <td><strong>${a.studentName}</strong></td>
+          <td>${a.examName}</td>
+          <td><span class="badge ${a.type.includes('ALERT') ? 'badge-red' : 'badge-purple'}">${a.alertType}</span></td>
+          <td><div style="font-weight:800;text-align:center;">${a.violations || '--'}</div></td>
+          <td>${new Date(a.timestamp).toLocaleTimeString()}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="badge ${statusBadgeClass}">${a.status}</span>
+              <div class="dropdown-actions">
+                <button class="btn btn-secondary btn-xs" onclick="updateAlertStatus('${a.id}', 'Reviewed')" title="Mark as Reviewed">👁️</button>
+                <button class="btn btn-secondary btn-xs" onclick="updateAlertStatus('${a.id}', 'Resolved')" title="Mark as Resolved">✔️</button>
+                <button class="btn btn-primary btn-xs" onclick="resendStudentEmail('${a.sid}')" title="Resend Result Email">📧 RESEND</button>
+                <button class="btn btn-danger btn-xs" onclick="kickStudent('${a.sid}')" title="Kick Student">🚫 KICK</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    
+    // Update badge count (only awaiting review)
+    const awaitingCount = SECURITY_ALERTS.filter(a => a.status === 'Awaiting Review').length;
+    const badge = document.getElementById('alerts-badge');
+    if (badge) badge.textContent = awaitingCount;
+    const statAlerts = document.getElementById('stat-alerts');
+    if (statAlerts) statAlerts.textContent = awaitingCount;
   }
 
+  window.updateAlertStatus = function(id, newStatus) {
+    const alert = SECURITY_ALERTS.find(a => a.id === id);
+    if (alert) {
+      alert.status = newStatus;
+      renderSecurityAlerts();
+      showToast('info', 'Alert Status Updated', `Status changed to ${newStatus}`);
+    }
+  };
+
+  window.kickStudent = function(sid) {
+    if (confirm("Are you sure you want to KICK this student from the exam?")) {
+        REALTIME.broadcast(REALTIME.EVENTS.COMMAND_KICK_STUDENT, { sid: sid });
+        showToast('error', 'Student Kicked', 'Remote termination command sent.');
+    }
+  };
+
+  window.resendStudentEmail = async function(sid) {
+    const CLOUD_API_URL = 'PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE';
+    showToast('info', 'Email Dispatch', 'Searching for result record and triggering resend...');
+    const results = AUTH.getResults();
+    const res = results.find(r => r.userId === sid || r.sid === sid);
+    if (!res) {
+        showToast('error', 'Not Found', 'No completed exam record found for this student.');
+        return;
+    }
+
+    try {
+        if (!CLOUD_API_URL.startsWith('http')) throw new Error("Cloud API URL missing.");
+        
+        const response = await fetch(CLOUD_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                to: res.email,
+                subject: `NEXA EXAM – [RESEND] Your Exam Result: ${res.examTitle}`,
+                body: `Hello ${res.fullName},\n\nThis is a resend of your exam result as requested.\n\nExam Name: ${res.examTitle}\nScore: ${res.score}%\nResult: ${res.score >= 40 ? 'PASS' : 'FAIL'}\n\nRegards,\nNEXA EXAM System`,
+            })
+        });
+        const data = await response.json();
+        if (data.ok) showToast('success', 'Email Sent', `Result resend successful for ${res.fullName}!`);
+        else throw new Error(data.msg);
+    } catch (err) {
+        showToast('error', 'Send Failed', 'Cloud email service not configured.');
+    }
+  };
+
+  window.resendSummaryReport = async function(examName) {
+    const CLOUD_API_URL = 'PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE';
+    showToast('info', 'Summary Dispatch', `Compiling stats for ${examName} and sending to manager...`);
+    try {
+        if (!CLOUD_API_URL.startsWith('http')) throw new Error("Cloud API URL missing.");
+
+        const response = await fetch(CLOUD_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                to: AUTH.getSession().email,
+                subject: `NEXA EXAM – [RESEND] Summary Report: ${examName}`,
+                body: `Hello,\n\nThis is a resend of the summary report for the exam session: ${examName}.\n\nStatistical Overview:\nStatus: Session Completed\nAttempts Logged: Active\n\nRegards,\nNEXA EXAM System`,
+            })
+        });
+        const data = await response.json();
+        if (data.ok) showToast('success', 'Summary Sent', 'Summary report has been resent to your email.');
+        else throw new Error(data.msg);
+    } catch (err) {
+        showToast('error', 'Send Failed', 'Cloud email service failed.');
+    }
+  };
+
   window.dismissAlert = function (i) {
-    ALERTS.splice(i, 1);
-    renderAlerts();
+    SECURITY_ALERTS.splice(i, 1);
+    renderSecurityAlerts();
     showToast('success', 'Alert dismissed', 'The proctoring alert was removed.');
   };
   window.clearAlerts = function () {
-    ALERTS = [];
-    renderAlerts();
+    SECURITY_ALERTS = [];
+    renderSecurityAlerts();
     showToast('success', 'All alerts cleared', 'Alerts list has been reset.');
   };
 
@@ -307,28 +467,212 @@
   ];
   window.toggleSimulation = function () {
     const a = SIM_ALERTS[simCount % SIM_ALERTS.length];
-    ALERTS.unshift({ ...a });
+    
+    SECURITY_ALERTS.unshift({
+        id: 'sim_' + Date.now(),
+        sid: 'SIM001',
+        studentName: a.desc.split(' – ')[0],
+        examName: a.exam,
+        alertType: a.title,
+        violations: 1,
+        timestamp: Date.now(),
+        type: a.type,
+        status: 'Awaiting Review'
+    });
+
     ACTIVITY_FEED.unshift({ icon: a.icon, text: `Alert: ${a.title} – ${a.desc}`, time: 'just now' });
-    simCount++; renderAlerts(); renderActivity();
+    simCount++; 
+    renderSecurityAlerts(); 
+    renderActivity();
     showToast('warning', 'New Alert', `${a.title}: ${a.desc}`);
   };
+
+  // ---- Real-Time Monitoring Table ----
+  let LIVE_SESSIONS = {}; // Map of userId -> { sessionData }
+
+  function renderLiveMonitoring() {
+    const tbody = document.getElementById('monitor-tbody');
+    if (!tbody) return;
+    
+    // Convert session map to array and sort by activity
+    const sessions = Object.values(LIVE_SESSIONS).sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
+    
+    if (sessions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No active monitored sessions yet. Live data will appear here.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = sessions.map(s => {
+        const isOffline = (new Date() - new Date(s.lastUpdate)) > 15000;
+        const statusClass = s.status === 'Completed' ? 'badge-green' : (isOffline ? 'badge-red' : 'badge-purple');
+        const hasAlerts = s.alerts > 0;
+        
+        return `
+            <tr>
+                <td><strong>${s.studentName}</strong></td>
+                <td><span class="badge badge-purple">${s.examName}</span></td>
+                <td><span class="badge ${statusClass}">${s.status}</span></td>
+                <td>${s.startTime || '--:--'}</td>
+                <td>${s.endTime || '--:--'}</td>
+                <td><div style="font-weight:700;">${s.attemptsUsed || 1}</div></td>
+                <td>
+                    <span class="badge ${hasAlerts ? 'badge-red' : 'badge-green'}">
+                        ${hasAlerts ? '⚠️ Alert' : '✅ Active'}
+                    </span>
+                </td>
+                <td>
+                    <div style="display:flex;gap:4px;">
+                        <button class="btn btn-primary btn-xs" onclick="resendStudentEmail('${s.sid || ''}')" title="Resend Result Email">📧</button>
+                        <button class="btn btn-danger btn-xs" onclick="kickStudent('${s.sid || ''}')">🔴</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Update global stat cards
+    const activeCount = sessions.filter(s => s.status === 'Active' && (new Date() - new Date(s.lastUpdate)) < 15000).length;
+    const completedCount = sessions.filter(s => s.status === 'Completed').length;
+    const totalStudents = sessions.length;
+    
+    const activeStat = document.getElementById('stat-active-exams');
+    if (activeStat) activeStat.textContent = activeCount;
+    const onlineStat = document.getElementById('stat-students-online');
+    if (onlineStat) onlineStat.textContent = activeCount;
+    const completionStat = document.getElementById('stat-completion');
+    if (completionStat) completionStat.textContent = Math.round((completedCount / (totalStudents || 1)) * 100);
+  }
+
+  function renderAdminResults() {
+    const tbody = document.getElementById('results-tbody');
+    if (!tbody) return;
+    const allResults = AUTH.getResults().sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (allResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">No completed results found in history.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = allResults.map(r => {
+        const isPass = r.score >= 40;
+        return `
+            <tr>
+                <td><strong>${r.fullName}</strong><br><small>${r.userId}</small></td>
+                <td>${r.examTitle}</td>
+                <td><span style="font-weight:800;color:${isPass ? 'var(--accent-green)' : 'var(--accent-red)'}">${r.score}%</span></td>
+                <td><span class="badge ${isPass ? 'badge-green' : 'badge-red'}">${isPass ? 'PASS' : 'FAIL'}</span></td>
+                <td style="font-size:12px;">${new Date(r.timestamp).toLocaleDateString()} ${new Date(r.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                <td style="text-align:center;font-weight:700;">${r.violations || 0}</td>
+                <td>
+                    <button class="btn btn-primary btn-xs" onclick="resendStudentEmail('${r.userId}')">Resend 📧</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+  }
+
+  // ---- Real-Time Event Listener ----
+  REALTIME.on((payload) => {
+    const { type, data, sessionId, timestamp } = payload;
+    if (!LIVE_SESSIONS[sessionId]) {
+        LIVE_SESSIONS[sessionId] = {
+            sid: data.sid || sessionId,
+            studentName: data.fullName || 'Unknown Student',
+            examName: data.examTitle || '--',
+            status: 'Inactive',
+            startTime: '--',
+            endTime: '--',
+            alerts: 0,
+            attemptsUsed: data.attemptsUsed || 1,
+            lastUpdate: timestamp
+        };
+    }
+
+    const session = LIVE_SESSIONS[sessionId];
+    session.lastUpdate = timestamp;
+
+    switch (type) {
+        case REALTIME.EVENTS.EXAM_STARTED:
+            session.status = 'Active';
+            session.startTime = data.startTime;
+            session.examName = data.examTitle;
+            showToast('info', 'New Exam Started', `${data.fullName} is now taking ${data.examTitle}`);
+            break;
+            
+        case REALTIME.EVENTS.EXAM_COMPLETED:
+            session.status = 'Completed';
+            session.endTime = data.endTime;
+            showToast('success', 'Exam Completed', `${data.fullName} finished ${data.examTitle} with ${data.score}%`);
+            break;
+            
+        case REALTIME.EVENTS.ALERT_TAB_SWITCH:
+        case REALTIME.EVENTS.ALERT_CAMERA_OFF:
+        case REALTIME.EVENTS.ALERT_KEY_RESTRICTED:
+        case REALTIME.EVENTS.ALERT_COPY_PASTE:
+        case REALTIME.EVENTS.ALERT_RIGHT_CLICK:
+            session.alerts++;
+            const typeLabels = {
+                [REALTIME.EVENTS.ALERT_TAB_SWITCH]: 'Tab Switching Detected',
+                [REALTIME.EVENTS.ALERT_CAMERA_OFF]: 'Camera Disabled',
+                [REALTIME.EVENTS.ALERT_KEY_RESTRICTED]: 'Shift key usage detected',
+                [REALTIME.EVENTS.ALERT_COPY_PASTE]: 'Copy/Paste Attempt',
+                [REALTIME.EVENTS.ALERT_RIGHT_CLICK]: 'Right-Click Attempt',
+                [REALTIME.EVENTS.ALERT_FACE_NOT_DETECTED]: 'Face Not Detected',
+                [REALTIME.EVENTS.ALERT_VIOLATION_LIMIT]: 'Violation Limit Exceeded'
+            };
+            
+            SECURITY_ALERTS.unshift({
+                id: 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                sid: data.sid || session.sid || sessionId,
+                studentName: data.fullName,
+                examName: data.examTitle,
+                alertType: typeLabels[type] || 'Suspicious Activity',
+                violations: data.totalViolations,
+                timestamp: timestamp,
+                type: type,
+                status: 'Awaiting Review'
+            });
+            
+            ACTIVITY_FEED.unshift({ icon: '⚠️', text: `Security: ${data.fullName} - ${typeLabels[type]}`, time: 'just now' });
+            renderActivity();
+            renderSecurityAlerts();
+            renderStudents(); // Update students table too
+            showToast('error', 'Security Alert', `${data.fullName}: ${typeLabels[type]}`);
+            break;
+            
+        case REALTIME.EVENTS.ALERT_EXAM_TERMINATED:
+            showToast('error', 'Exam Terminated', `${data.fullName} was removed: ${data.reason}`);
+            ACTIVITY_FEED.unshift({ icon: '🔴', text: `Terminated: ${data.fullName} (${data.reason})`, time: 'just now' });
+            renderActivity();
+            break;
+            
+        case REALTIME.EVENTS.HEARTBEAT:
+            // Just update lastUpdate time
+            break;
+    }
+
+    renderLiveMonitoring();
+  });
 
   // ---- Initial Render ----
   function init() {
     updateSidebar();
-    renderExams(); renderStudents(); renderAlerts(); renderActivity(); renderConnectivity();
+    renderExams();
+    renderStudents();
+    renderSecurityAlerts();
+    renderActivity();
+    renderConnectivity();
+    renderLiveMonitoring();
+    renderAdminResults();
+
+    // Refresh monitoring to handle offline status
+    setInterval(renderLiveMonitoring, 10000);
+
     const onlineData = [72, 75, 80, 85, 82, 87, 90, 87, 84, 87];
     drawLineChart('online-svg', onlineData, '#6366f1', 'grad1');
     drawBarChart('alerts-svg', ['Tab Switch', 'Camera', 'Network', 'Behavior', 'Other'], [8, 5, 6, 4, 5], ['#ef4444', '#f59e0b', '#06b6d4', '#8b5cf6', '#10b981']);
     drawDonut('donut-svg', 'donut-legend', [{ label: 'Completed', value: 35, color: '#10b981' }, { label: 'In Progress', value: 52, color: '#6366f1' }, { label: 'Not Started', value: 13, color: '#f59e0b' },]);
     drawWeeklyChart();
-    setInterval(() => {
-      const el = document.getElementById('stat-students-online');
-      if (el) { const cur = parseInt(el.textContent) || 87; el.textContent = Math.max(60, cur + Math.floor(Math.random() * 5) - 2); }
-      onlineData.push(onlineData[onlineData.length - 1] + Math.floor(Math.random() * 6) - 3);
-      onlineData.shift();
-      drawLineChart('online-svg', onlineData, '#6366f1', 'grad1');
-    }, 5000);
   }
 
   document.addEventListener('DOMContentLoaded', init);

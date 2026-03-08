@@ -1,5 +1,5 @@
-// ===== ExamGuard Shared Auth System =====
-console.log('ExamGuard Auth System Loading...');
+// ===== NEXA EXAM Shared Auth System =====
+console.log('NEXA EXAM Auth System Loading...');
 
 const AUTH = {
 
@@ -122,6 +122,106 @@ const AUTH = {
         if (score <= 2) return { label: 'Fair', pct: 45, color: '#f59e0b' };
         if (score <= 3) return { label: 'Good', pct: 70, color: '#06b6d4' };
         return { label: 'Strong', pct: 100, color: '#10b981' };
+    },
+
+    // ---- Result Store ----
+    saveResult(result) {
+        try {
+            const results = JSON.parse(localStorage.getItem('eg_exam_results') || '[]');
+            results.push({
+                ...result,
+                id: 'RES' + Date.now(),
+                userId: this.getSession().userId,
+                fullName: this.getSession().fullName,
+                email: this.getSession().email,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('eg_exam_results', JSON.stringify(results));
+        } catch (e) {
+            console.error('Error saving exam result', e);
+        }
+    },
+
+    getResults(examId) {
+        try {
+            const raw = localStorage.getItem('eg_exam_results');
+            if (!raw) return [];
+            const all = JSON.parse(raw);
+            if (!Array.isArray(all)) return [];
+            return examId ? all.filter(r => r && r.examId === examId) : all.filter(Boolean);
+        } catch (e) {
+            console.error('Error reading exam results', e);
+            return [];
+        }
+    },
+
+    // ---- Exam Management ----
+    getExams() {
+        try {
+            return JSON.parse(localStorage.getItem('eg_exams') || '[]');
+        } catch (e) {
+            console.error('Error reading exams', e);
+            return [];
+        }
+    },
+
+    saveExams(exams) {
+        localStorage.setItem('eg_exams', JSON.stringify(exams));
+    },
+
+    saveExam(exam) {
+        const exams = this.getExams();
+        const index = exams.findIndex(e => e.id === exam.id);
+        if (index >= 0) {
+            exams[index] = { ...exams[index], ...exam, updatedAt: new Date().toISOString() };
+        } else {
+            exams.push({ 
+                ...exam, 
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: exam.status || 'scheduled' // scheduled, active, completed
+            });
+        }
+        this.saveExams(exams);
+    },
+
+    deleteExam(examId) {
+        const exams = this.getExams().filter(e => e.id !== examId);
+        this.saveExams(exams);
+        // Also delete related questions
+        const questions = this.getQuestions().filter(q => q.examId !== examId);
+        this.saveQuestions(questions);
+    },
+
+    // ---- Question Management ----
+    getQuestions(examId) {
+        try {
+            const all = JSON.parse(localStorage.getItem('eg_questions') || '[]');
+            return examId ? all.filter(q => q.examId === examId) : all;
+        } catch (e) {
+            console.error('Error reading questions', e);
+            return [];
+        }
+    },
+
+    saveQuestions(questions) {
+        localStorage.setItem('eg_questions', JSON.stringify(questions));
+    },
+
+    saveQuestion(question) {
+        const questions = this.getQuestions();
+        const index = questions.findIndex(q => q.id === question.id);
+        if (index >= 0) {
+            questions[index] = { ...questions[index], ...question };
+        } else {
+            questions.push({ ...question, id: question.id || ('Q' + Date.now()) });
+        }
+        this.saveQuestions(questions);
+    },
+
+    deleteQuestion(id) {
+        const questions = this.getQuestions().filter(q => q.id !== id);
+        this.saveQuestions(questions);
     }
 };
 
@@ -134,7 +234,7 @@ const AUTH = {
                 AUTH.registerUser({
                     userId: id + '123',
                     fullName: role === 'admin' ? 'Admin User' : role === 'student' ? 'Aarav Kumar' : 'Question Manager',
-                    email: id + '@examguard.io',
+                    email: id + '@nexaexam.io',
                     password: id + '@Pass1',
                     role
                 });
@@ -147,4 +247,29 @@ const AUTH = {
 })();
 
 function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
-console.log('ExamGuard Auth System Ready.');
+
+/**
+ * Shows information popup for dashboards
+ * @param {string} role - 'student', 'admin', or 'manager'
+ */
+function showInfo(role) {
+    const infoMap = {
+        'student': "This dashboard allows students to view available exams, start the exam, answer questions, and submit their responses.",
+        'admin': "This dashboard allows administrators to monitor active exams, track student connectivity, and view proctoring alerts.",
+        'manager': "This section allows the question manager to create exams, upload questions, edit questions, and manage exam content."
+    };
+
+    const msg = infoMap[role] || "Dashboard Information";
+    
+    // Check if there's a modal we can reuse, otherwise use alert
+    const existingModal = document.getElementById('info-modal');
+    if (existingModal) {
+        document.getElementById('info-modal-msg').innerText = msg;
+        existingModal.classList.remove('hidden');
+    } else {
+        alert("ℹ️ Information\n\n" + msg);
+    }
+}
+window.showInfo = showInfo;
+
+    console.log('NEXA EXAM Auth System Ready.');

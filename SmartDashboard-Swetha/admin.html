@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard – ExamGuard</title>
+    <title>Admin Dashboard – NEXA EXAM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
@@ -20,13 +20,18 @@
         <div class="orb orb-3"></div>
     </div>
 
+    <div class="nexa-header">
+        <div class="nexa-title">NEXA EXAM</div>
+        <div class="nexa-subtitle">The Next-Generation Examination System 🌎🖥️</div>
+    </div>
+
     <div class="app-layout" id="app">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="sidebar-brand-icon">🛡️</div>
                 <div>
-                    <div class="sidebar-brand-name">ExamGuard</div>
+                    <div class="sidebar-brand-name">NEXA EXAM</div>
                     <div class="sidebar-brand-role">Admin Panel</div>
                 </div>
             </div>
@@ -34,6 +39,9 @@
                 <div class="nav-section-title">Overview</div>
                 <button class="nav-item active" onclick="showSection('dashboard')">
                     <span class="nav-icon">📊</span> Dashboard
+                </button>
+                <button class="nav-item" onclick="showSection('monitor')">
+                    <span class="nav-icon">📡</span> Live Monitor
                 </button>
                 <button class="nav-item" onclick="showSection('exams')">
                     <span class="nav-icon">📝</span> Active Exams
@@ -44,7 +52,10 @@
                 <div class="nav-section-title">Monitoring</div>
                 <button class="nav-item" onclick="showSection('alerts')" id="nav-alerts">
                     <span class="nav-icon">🚨</span> Alerts
-                    <span class="nav-badge" id="alerts-badge">3</span>
+                    <span class="nav-badge" id="alerts-badge">0</span>
+                </button>
+                <button class="nav-item" onclick="showSection('results')">
+                    <span class="nav-icon">📊</span> Results
                 </button>
                 <button class="nav-item" onclick="showSection('activity')">
                     <span class="nav-icon">📡</span> Live Activity
@@ -58,7 +69,7 @@
                     <div class="user-avatar" id="user-initial">A</div>
                     <div>
                         <div class="user-name" id="user-fullname">Administrator</div>
-                        <div class="user-role" id="user-email">admin@examguard.io</div>
+                        <div class="user-role" id="user-email">admin@nexaexam.io</div>
                     </div>
                 </div>
                 <button class="btn-logout" onclick="AUTH.logout()">🚪 Logout</button>
@@ -75,6 +86,7 @@
                 <div class="topbar-right">
                     <div id="live-clock" style="font-size:13px;color:var(--text-muted);font-weight:500;"></div>
                     <span class="badge badge-green"><span class="badge-dot badge-dot-pulse"></span>Live</span>
+                    <button class="btn-info-circle" onclick="showInfo('admin')" title="Page Info">ℹ️</button>
                     <button class="btn btn-secondary btn-sm" onclick="toggleSimulation()">⚡ Simulate Alert</button>
                 </div>
             </div>
@@ -182,8 +194,8 @@
                 <div class="content-section" id="sec-exams">
                     <div class="section-header">
                         <div>
-                            <div class="section-title">Active Exams</div>
-                            <div class="section-subtitle">Currently running examination sessions</div>
+                            <div class="section-title">Programmed Exams</div>
+                            <div class="section-subtitle">List of all exams currently in the system</div>
                         </div>
                     </div>
                     <div class="table-wrapper">
@@ -192,7 +204,7 @@
                                 <tr>
                                     <th>Exam Name</th>
                                     <th>Subject</th>
-                                    <th>Students</th>
+                                    <th>Students (Reg)</th>
                                     <th>Duration</th>
                                     <th>Progress</th>
                                     <th>Status</th>
@@ -204,12 +216,40 @@
                     </div>
                 </div>
 
+                <!-- LIVE ACTIVITY SECTION (Renaming for Monitor) -->
+                <div class="content-section" id="sec-monitor">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Live Session Monitor</div>
+                            <div class="section-subtitle">Real-time tracking of students currently in exams</div>
+                        </div>
+                        <span class="badge badge-green"><span class="badge-dot badge-dot-pulse"></span>Live Monitor</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Exam Name</th>
+                                    <th>Status</th>
+                                    <th>Start Time</th>
+                                    <th>Submission Time</th>
+                                    <th>Attempts</th>
+                                    <th>Security</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitor-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- STUDENTS SECTION -->
                 <div class="content-section" id="sec-students">
                     <div class="section-header">
                         <div>
-                            <div class="section-title">Students</div>
-                            <div class="section-subtitle">All students currently in exam sessions</div>
+                            <div class="section-title">Student Directory</div>
+                            <div class="section-subtitle">Manage and view all registered students</div>
                         </div>
                         <input type="text" placeholder="🔍 Search students..." class="form-control" style="width:240px;"
                             oninput="filterStudents(this.value)" />
@@ -220,11 +260,11 @@
                                 <tr>
                                     <th>Student</th>
                                     <th>ID</th>
-                                    <th>Exam</th>
-                                    <th>Progress</th>
-                                    <th>Time Left</th>
+                                    <th>Last Exam</th>
+                                    <th>Global Progress</th>
                                     <th>Connectivity</th>
                                     <th>Alerts</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="students-tbody"></tbody>
@@ -232,16 +272,56 @@
                     </div>
                 </div>
 
-                <!-- ALERTS SECTION -->
-                <div class="content-section" id="sec-alerts">
+                <!-- RESULTS SECTION -->
+                <div class="content-section" id="sec-results">
                     <div class="section-header">
                         <div>
-                            <div class="section-title">Proctoring Alerts</div>
-                            <div class="section-subtitle">Suspicious activity and system events</div>
+                            <div class="section-title">Completed Results</div>
+                            <div class="section-subtitle">Historical records of all submitted examinations</div>
                         </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Exam Title</th>
+                                    <th>Score</th>
+                                    <th>Result</th>
+                                    <th>Date</th>
+                                    <th>Violations</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ALERTS SECTION -->
+                <div class="content-section" id="sec-alerts">
+                <!-- ... existing alerts section content ... -->
+                    <div class="section-header">
+                        <div></div>
                         <button class="btn btn-secondary btn-sm" onclick="clearAlerts()">Clear All</button>
                     </div>
-                    <div id="alerts-list"></div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Exam Name</th>
+                                    <th>Alert Type</th>
+                                    <th style="text-align:center;">Violations</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="security-alerts-tbody">
+                                <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No suspicious activity detected. All systems nominal. ✅</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- LIVE ACTIVITY SECTION -->
@@ -309,6 +389,7 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
+    <script src="js/realtime.js"></script>
     <script src="js/admin.js"></script>
 </body>
 
