@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Portal – NEXA EXAM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/student.css" />
+    <script src="js/auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2" style="background:radial-gradient(circle,#06b6d4,transparent);"></div>
+    </div>
+
+    <div class="nexa-header">
+        <div class="nexa-title">NEXA EXAM</div>
+        <div class="nexa-subtitle">The Next-Generation Examination System 🌎🖥️</div>
+    </div>
+
+    <div class="app-layout" id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">🎓</div>
+                <div>
+                    <div class="sidebar-brand-name">NEXA EXAM</div>
+                    <div class="sidebar-brand-role">Student Portal</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">My Exams</div>
+                <button class="nav-item active" onclick="showSection('exams')" id="nav-exams">
+                    <span class="nav-icon">📋</span> Available Exams
+                </button>
+                <button class="nav-item" onclick="showSection('results')" id="nav-results">
+                    <span class="nav-icon">📊</span> My Results
+                </button>
+                <div class="nav-section-title">Account</div>
+                <button class="nav-item" onclick="showSection('profile')" id="nav-profile">
+                    <span class="nav-icon">👤</span> My Profile
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">S</div>
+                    <div>
+                        <div class="user-name" id="user-fullname">Student Name</div>
+                        <div class="user-role" id="user-email">student@example.com</div>
+                    </div>
+                </div>
+                <div id="conn-status-bar"
+                    style="display:flex;align-items:center;gap:8px;padding:8px 8px 0;font-size:12px;color:var(--text-muted);">
+                    <span class="connectivity-dot conn-online" id="conn-dot"></span>
+                    <span id="conn-label">Connected</span>
+                </div>
+                <button class="btn-logout" onclick="AUTH.logout()">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="topbar-title" id="page-title">Available Exams</div>
+                    <div class="topbar-subtitle" id="page-subtitle">Select an exam to begin</div>
+                </div>
+                <div class="topbar-right">
+                    <div id="camera-container" class="camera-preview-small hidden">
+                        <video id="exam-camera" autoplay muted playsinline></video>
+                        <div class="camera-label">LIVE PROCTORING</div>
+                    </div>
+                    <div id="live-clock" style="font-size:13px;color:var(--text-muted);font-weight:500;"></div>
+                    <span id="conn-badge" class="badge badge-green"><span
+                            class="badge-dot badge-dot-pulse"></span>Online</span>
+                    <button class="btn-info-circle" onclick="showInfo('student')" title="Page Info" style="margin-left:12px;">ℹ️</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+
+                <!-- AVAILABLE EXAMS SECTION -->
+                <div class="content-section active" id="sec-exams">
+                    <div id="exam-cards" class="exam-cards-grid"></div>
+                </div>
+
+                <!-- EXAM INTERFACE SECTION -->
+                <div class="content-section" id="sec-exam-interface">
+                    <div id="exam-interface-content"></div>
+                </div>
+
+                <!-- RESULTS SECTION -->
+                <div class="content-section" id="sec-results">
+                    <div class="section-header">
+                        <div>
+                            <h2 class="section-title">My Exam Results</h2>
+                            <p class="section-subtitle">Performance history and detailed score breakdowns</p>
+                        </div>
+                    </div>
+                    <div id="results-content"></div>
+                </div>
+
+                <!-- PROFILE SECTION -->
+                <div class="content-section" id="sec-profile">
+                    <div id="profile-content"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Submission Modal -->
+    <div class="modal-overlay hidden" id="submit-modal">
+        <div class="modal" style="max-width:420px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:16px;">🏁</div>
+            <div class="modal-title" style="margin-bottom:8px;">Submit Exam?</div>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:24px;" id="submit-modal-msg">Are you sure
+                you want to submit your exam? You cannot make changes after submission.</p>
+            <div style="display:flex;gap:12px;justify-content:center;">
+                <button class="btn btn-secondary" onclick="closeSubmitModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmSubmit()">Submit Exam</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Warning Modal -->
+    <div id="security-modal" class="modal-overlay hidden">
+        <div class="modal-card security-alert">
+            <div class="modal-header">
+                <h3 style="color:#ef4444;">🚨 SECURITY ALERT</h3>
+            </div>
+            <div class="modal-body">
+                <p id="security-msg">Restricted action detected!</p>
+                <!-- Grace Period UI -->
+                <div id="grace-period-container" class="hidden" style="margin-top:15px;padding:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;text-align:center;">
+                    <div style="color:#f59e0b;font-weight:700;font-size:11px;text-transform:uppercase;margin-bottom:4px;">Action Required</div>
+                    <div style="font-size:24px;font-weight:800;color:#f59e0b;" id="grace-countdown">15s</div>
+                    <p style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:4px;">Resolve to avoid violation.</p>
+                </div>
+                <div class="violation-count" style="margin-top:15px;">Violations: <span id="violation-num">0</span></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeSecurityModal()">I UNDERSTAND</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compulsory Camera Modal (Non-dismissible) -->
+    <div id="camera-error-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-card security-alert" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 style="color:#ef4444;">📷 CAMERA REQUIRED</h3>
+            </div>
+            <div class="modal-body" style="padding: 30px;">
+                <div style="font-size: 50px; margin-bottom: 20px;">🚫</div>
+                <p style="font-size: 16px; font-weight: 600; color: #fff;">Camera has been disabled or blocked.</p>
+                <p style="color: var(--text-secondary); margin-top: 10px;">Please enable your camera to continue the exam. The exam is currently paused.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Termination Modal (Non-dismissible) -->
+    <div id="termination-modal" class="modal-overlay hidden" style="z-index: 10000;">
+        <div class="modal-card security-alert" style="max-width: 480px; background: #111;">
+            <div class="modal-header">
+                <h3 style="color:#ef4444;">⚠️ EXAM TERMINATED</h3>
+            </div>
+            <div class="modal-body" style="padding: 40px; text-align: center;">
+                <div style="font-size: 64px; margin-bottom: 24px;">🚫</div>
+                <p id="termination-msg" style="font-size: 18px; font-weight: 700; color: #fff; line-height: 1.5;">
+                    The exam has been terminated.
+                </p>
+                <p style="color: var(--text-secondary); margin-top: 16px; font-size: 14px;">
+                    This incident has been reported to the administrator. You will be redirected shortly.
+                </p>
+                <button class="btn btn-primary" style="margin-top: 30px; width: 100%;" onclick="window.location.href='index.html'">EXIT SYSTEM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal-overlay hidden" id="success-modal">
+        <div class="modal" style="max-width:420px;text-align:center;">
+            <div style="font-size:56px;margin-bottom:16px;">🎉</div>
+            <div class="modal-title" style="margin-bottom:8px;">Exam Submitted!</div>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:8px;" id="success-msg">Your answers have
+                been submitted successfully.</p>
+            <p style="font-size:24px;font-weight:800;color:var(--accent-green);margin-bottom:24px;" id="score-display">
+            </p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn btn-primary" onclick="closeSuccessModal()">Dashboard</button>
+                <button class="btn btn-secondary" onclick="mailOnSuccess()">📧 Mail Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="js/realtime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    <script src="js/student.js"></script>
+</body>
+
+</html>
